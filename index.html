@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TikTok Downloader - Baixe Vídeos Sem Marca d'Água</title>
+  <link rel="icon" href="data:," />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html {
+      transition: background-color 0.3s, color 0.3s;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white min-h-screen flex flex-col">
+  <header class="flex items-center justify-between px-6 py-4 border-b border-gray-300 dark:border-gray-700">
+    <h1 class="text-2xl font-extrabold tracking-tight select-none cursor-default">
+      <span class="text-pink-600 dark:text-pink-400">TikTok</span> Downloader
+    </h1>
+    <button id="toggleDark" aria-label="Alternar modo claro/escuro"
+      class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+      🌙
+    </button>
+  </header>
+
+  <main class="flex-grow flex flex-col items-center justify-center px-4 max-w-3xl mx-auto w-full">
+    <form id="downloadForm" class="w-full">
+      <input
+        id="urlInput"
+        type="text"
+        placeholder="Cole o link do TikTok aqui..."
+        autocomplete="off"
+        class="w-full rounded-xl border border-gray-300 dark:border-gray-600 p-4 text-lg placeholder-gray-500 dark:placeholder-gray-400 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
+        required
+      />
+      <button
+        type="submit"
+        id="downloadBtn"
+        class="mt-5 w-full bg-pink-600 hover:bg-pink-700 transition-colors rounded-xl text-white font-bold py-4 text-lg shadow-lg"
+      >
+        Baixar Vídeo
+      </button>
+    </form>
+
+    <section
+      id="resultSection"
+      class="mt-8 w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hidden flex-col items-center"
+    >
+      <div id="loader" class="flex justify-center mb-4">
+        <svg class="animate-spin h-8 w-8 text-pink-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8z"
+          ></path>
+        </svg>
+      </div>
+
+      <video
+        id="videoPreview"
+        class="rounded-xl max-h-72 w-full mb-4 hidden"
+        controls
+        preload="metadata"
+      ></video>
+
+      <div id="downloadLinks" class="flex flex-wrap gap-4 justify-center w-full"></div>
+      <p id="errorMsg" class="text-red-500 mt-4 text-center hidden"></p>
+    </section>
+  </main>
+
+  <footer class="py-4 text-center text-sm text-gray-500 dark:text-gray-400 select-none">
+    Feito por você • Powered by RapidAPI
+  </footer>
+
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script>
+    const toggleBtn = document.getElementById('toggleDark');
+    const rootEl = document.documentElement;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (
+      localStorage.theme === 'dark' ||
+      (!('theme' in localStorage) && prefersDark)
+    ) {
+      rootEl.classList.add('dark');
+      toggleBtn.textContent = '☀️';
+    } else {
+      toggleBtn.textContent = '🌙';
+    }
+
+    toggleBtn.onclick = () => {
+      if (rootEl.classList.contains('dark')) {
+        rootEl.classList.remove('dark');
+        localStorage.theme = 'light';
+        toggleBtn.textContent = '🌙';
+      } else {
+        rootEl.classList.add('dark');
+        localStorage.theme = 'dark';
+        toggleBtn.textContent = '☀️';
+      }
+    };
+
+    const form = document.getElementById('downloadForm');
+    const urlInput = document.getElementById('urlInput');
+    const resultSection = document.getElementById('resultSection');
+    const loader = document.getElementById('loader');
+    const videoPreview = document.getElementById('videoPreview');
+    const downloadLinks = document.getElementById('downloadLinks');
+    const errorMsg = document.getElementById('errorMsg');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = urlInput.value.trim();
+      if (!url.includes('tiktok.com')) {
+        alert('Por favor, insira um link válido do TikTok.');
+        return;
+      }
+
+      errorMsg.classList.add('hidden');
+      downloadLinks.innerHTML = '';
+      videoPreview.src = '';
+      videoPreview.classList.add('hidden');
+      resultSection.classList.remove('hidden');
+      loader.style.display = 'flex';
+
+      try {
+        const options = {
+          method: 'GET',
+          url: 'https://tiktok-api23.p.rapidapi.com/api/download/video',
+          params: { url },
+          headers: {
+            'x-rapidapi-host': 'tiktok-api23.p.rapidapi.com',
+            'x-rapidapi-key': '13de082c03mshbc25a4de77df86ep1f88efjsn0699b1f9175d',
+          },
+        };
+        const response = await axios.request(options);
+        const data = response.data;
+
+        const noWatermarkUrl = data.play;
+
+        if (!noWatermarkUrl) {
+          throw new Error('Não foi possível obter o vídeo.');
+        }
+
+        loader.style.display = 'none';
+
+        videoPreview.src = noWatermarkUrl;
+        videoPreview.classList.remove('hidden');
+
+        // Criar botão para download manual (caso automático não funcione)
+        const btn = document.createElement('a');
+        btn.href = noWatermarkUrl;
+        btn.download = 'video-tiktok.mp4';
+        btn.target = '_blank';
+        btn.rel = 'noopener noreferrer';
+        btn.className = 'bg-pink-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-pink-700 transition';
+        btn.textContent = 'Baixar Vídeo (Sem Marca d\'Água)';
+        downloadLinks.appendChild(btn);
+
+        // Forçar download automático via link temporário
+        const a = document.createElement('a');
+        a.href = noWatermarkUrl;
+        a.download = 'video-tiktok.mp4';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+      } catch (error) {
+        loader.style.display = 'none';
+        errorMsg.textContent = 'Erro ao obter o vídeo. Verifique o link e tente novamente.';
+        errorMsg.classList.remove('hidden');
+        console.error(error);
+      }
+    });
+  </script>
+</body>
+</html>
